@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-set -o errexit
+set -euo pipefail
 
 # Upgrade pip, setuptools, and wheel first
-pip install --upgrade pip setuptools wheel
+python -m pip install --upgrade pip setuptools wheel
 
-# Install packages with explicit binary-only preference
-pip install --only-binary :all: -r requirements.txt
+# Install packages preferring binary wheels to avoid source builds on Render
+pip install --prefer-binary -r backend/requirements.txt
 
 echo "Dependencies installed successfully"
