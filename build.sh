@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -o errexit
 
-# Install dependencies with pre-built wheels
+# Upgrade pip, setuptools, and wheel first
 pip install --upgrade pip setuptools wheel
-pip install -r requirements.txt
+
+# Install packages with explicit binary-only preference
+pip install --only-binary :all: -r requirements.txt
 
 echo "Dependencies installed successfully"
