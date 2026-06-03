@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CTR Processing Tool</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+    }
+
+    #root {
+      min-height: 100vh;
+    }
+
+    .app-header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+    }
+
+    .app-header h1 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: .5px;
+    }
+
+    .app-header .badge {
+      background: #4f46e5;
+      font-size: .7rem;
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+
+    .app-body {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 32px 16px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: .9rem;
+      color: #6b7280;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all .15s;
+    }
+
+    .tab:hover {
+      color: #4f46e5;
+    }
+
+    .tab.active {
+      color: #4f46e5;
+      border-bottom-color: #4f46e5;
+      font-weight: 600;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+      margin-bottom: 20px;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .card .subtitle {
+      color: #6b7280;
+      font-size: .85rem;
+      margin-bottom: 20px;
+    }
+
+    .dropzone {
+      border: 2px dashed #c4c9d4;
+      border-radius: 10px;
+      padding: 48px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .dropzone:hover,
+    .dropzone.over {
+      border-color: #4f46e5;
+      background: #f5f3ff;
+    }
+
+    .dropzone svg {
+      margin-bottom: 12px;
+    }
+
+    .dropzone p {
+      color: #6b7280;
+      font-size: .9rem;
+    }
+
+    .dropzone .file-name {
+      color: #4f46e5;
+      font-weight: 600;
+      margin-top: 8px;
+      font-size: .95rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: .88rem;
+      font-weight: 500;
+      transition: all .15s;
+    }
+
+    .btn-primary {
+      background: #4f46e5;
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #4338ca;
+    }
+
+    .btn-primary:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: #fff;
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+
+    .btn-outline {
+      background: #fff;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+
+    .btn-outline:hover {
+      background: #f9fafb;
+    }
+
+    .btn-add-more {
+      background: #f0fdf4;
+      color: #16a34a;
+      border: 1px dashed #86efac;
+    }
+
+    .btn-add-more:hover {
+      background: #dcfce7;
+      border-color: #4ade80;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: .82rem;
+    }
+
+    /* Section divider inside card */
+    .section-label {
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: #6b7280;
+      margin: 20px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e5e7eb;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-group.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: .82rem;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    input[type=text],
+    input[type=number] {
+      padding: 9px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: .9rem;
+      width: 100%;
+      transition: border-color .15s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
+    }
+
+    .hint {
+      font-size: .76rem;
+      color: #9ca3af;
+    }
+
+    /* Optional field indicator */
+    .opt-tag {
+      font-size: .7rem;
+      font-weight: 400;
+      color: #9ca3af;
+      margin-left: 4px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin-top: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .85rem;
+    }
+
+    th {
+      background: #f3f4f6;
+      padding: 12px 10px;
+      text-align: left;
+      font-weight: 600;
+      color: #374151;
+      border-bottom: 2px solid #e5e7eb;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: #f9fafb;
+    }
+
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: #d1d5db;
+      border-radius: 99px;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    .slider::before {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: .2s;
+    }
+
+    input:checked+.slider {
+      background: #4f46e5;
+    }
+
+    input:checked+.slider::before {
+      transform: translateX(18px);
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 99px;
+      font-size: .75rem;
+      font-weight: 500;
+    }
+
+    .chip-green {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .chip-gray {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    .chip-blue {
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .chip-violet {
+      background: #f5f3ff;
+      color: #5b21b6;
+    }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: .88rem;
+      margin-bottom: 16px;
+    }
+
+    .alert-success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .alert-error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .alert-info {
+      background: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #fff4;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 40px 0;
+      color: #9ca3af;
+      font-size: .9rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .ctr-badge {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      background: #eff6ff;
+      color: #1e40af;
+      padding: 4px 12px;
+      border-radius: 99px;
+      font-size: .82rem;
+      font-weight: 500;
+    }
+
+    /* Range pair display in table */
+    .range-pair {
+      font-size: .82rem;
+    }
+
+    .range-pair .fallback {
+      color: #9ca3af;
+      font-style: italic;
+    }
+
+    /* Extra entry block in campaign form */
+    .entry-block {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 14px;
+      background: #fafafa;
+      position: relative;
+    }
+
+    .entry-block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .entry-block-label {
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: #6b7280;
+    }
+
+    .btn-remove-entry {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #ef4444;
+      font-size: .82rem;
+      padding: 2px 8px;
+      border-radius: 6px;
+      transition: background .15s;
+    }
+
+    .btn-remove-entry:hover {
+      background: #fee2e2;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .entry-block {
+      animation: slideIn .2s ease;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef } = React;
+    const API = '';
+
+    const formatApiError = detail => {
+      if (!detail) return null;
+      if (typeof detail === 'string') return detail;
+      if (Array.isArray(detail)) {
+        return detail.map(item => {
+          if (typeof item === 'string') return item;
+          const loc = Array.isArray(item.loc) ? item.loc.filter(x => x !== 'body').join('.') : '';
+          return `${loc ? `${loc}: ` : ''}${item.msg || JSON.stringify(item)}`;
+        }).join(', ');
+      }
+      return detail.message || JSON.stringify(detail);
+    };
+
+    const api = async (path, opts = {}) => {
+      const res = await fetch(API + path, opts);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(formatApiError(err.detail) || `HTTP ${res.status}`);
+      }
+      return res;
+    };
+    const apiJson = async (path, opts = {}) => (await api(path, opts)).json();
+
+    const fmt = v => v != null ? `${v}%` : null;
+    const RangePair = ({ lo, hi }) =>
+      lo != null && hi != null
+        ? <span>{lo}% – {hi}%</span>
+        : <span className="fallback">fallback (75–89%)</span>;
+
+    // ── Upload Tab ──────────────────────────────────────────────────────────────
+    function UploadTab() {
+      const [file, setFile] = useState(null);
+      const [over, setOver] = useState(false);
+      const [status, setStatus] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [result, setResult] = useState(null);
+      const inputRef = useRef();
+
+      const handleFile = f => {
+        if (!f) return;
+        const ext = f.name.split('.').pop().toLowerCase();
+        if (!['xlsx', 'xls', 'csv'].includes(ext)) { setStatus({ type: 'error', msg: 'Only .xlsx, .xls, or .csv files are allowed.' }); return; }
+        setFile(f); setStatus(null); setResult(null);
+      };
+
+      const handleDrop = e => { e.preventDefault(); setOver(false); handleFile(e.dataTransfer.files[0]); };
+
+      const handleProcess = async () => {
+        if (!file) return;
+        setLoading(true); setStatus(null); setResult(null);
+        try {
+          const fd = new FormData(); fd.append('file', file);
+          const res = await api('/api/process', { method: 'POST', body: fd });
+          const blob = await res.blob();
+          const cd = res.headers.get('content-disposition') || '';
+          const match = cd.match(/filename="([^"]+)"/);
+          const name = match ? match[1] : `processed_${file.name.replace(/\.\w+$/, '')}.xlsx`;
+          const matchedRules = (res.headers.get('x-matched-rules') || '').split(',').filter(Boolean);
+          const fileCampaignIds = (res.headers.get('x-file-campaign-ids') || '').split(',').filter(Boolean);
+          setResult({ blobUrl: URL.createObjectURL(blob), name, matchedRules, fileCampaignIds });
+          setStatus({ type: 'success', msg: '✓ File processed — click Download to save it.' });
+        } catch (e) { setStatus({ type: 'error', msg: e.message }); }
+        finally { setLoading(false); }
+      };
+
+      const handleDownload = () => { if (!result) return; const a = document.createElement('a'); a.href = result.blobUrl; a.download = result.name; a.click(); };
+      const handleReset = () => { if (result) URL.revokeObjectURL(result.blobUrl); setFile(null); setStatus(null); setResult(null); };
+
+      return (
+        <div>
+          <div className="card">
+            <h2>Upload & Process File</h2>
+            <p className="subtitle">Upload your Excel or CSV file. CTR, Video Completion Rate, and Viewability are auto-calculated.</p>
+
+            {status && <div className={`alert alert-${status.type}`}>{status.msg}</div>}
+
+            {result && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '14px 16px', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                  <span style={{ fontWeight: 600, color: '#166534', fontSize: '.9rem' }}>📄 {result.name}</span>
+                  <button className="btn btn-primary" onClick={handleDownload} style={{ background: '#16a34a' }}>⬇ Download</button>
+                </div>
+                {result.matchedRules.length > 0 && (
+                  <div style={{ marginTop: 8, fontSize: '.8rem', color: '#166534' }}>
+                    ✓ VCR / Viewability rules applied to: <strong>{result.matchedRules.join(', ')}</strong>
+                  </div>
+                )}
+                {result.matchedRules.length === 0 && (
+                  <div style={{ marginTop: 8, fontSize: '.8rem', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '8px 10px' }}>
+                    ⚠ No campaign rules matched — global defaults used for all rows.
+                    {result.fileCampaignIds.length > 0 && (
+                      <div style={{ marginTop: 4 }}>
+                        Campaigns found in file: <strong>{result.fileCampaignIds.join(', ')}</strong>
+                        <br />→ Go to <em>Campaign Rules</em> tab and add a rule using one of these names exactly.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className={`dropzone${over ? ' over' : ''}`}
+              onClick={() => inputRef.current.click()}
+              onDragOver={e => { e.preventDefault(); setOver(true); }}
+              onDragLeave={() => setOver(false)}
+              onDrop={handleDrop}>
+              <svg width="40" height="40" fill="none" stroke="#9ca3af" strokeWidth="1.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+              <p>Drag &amp; drop your file here, or click to browse</p>
+              <p style={{ fontSize: '.78rem', color: '#d1d5db', marginTop: 4 }}>Supports .xlsx · .xls · .csv</p>
+              {file && <p className="file-name">📄 {file.name}</p>}
+              <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
+            </div>
+
+            <div className="actions">
+              <button className="btn btn-primary" onClick={handleProcess} disabled={!file || loading}>
+                {loading ? <><span className="spinner" />&nbsp;Processing…</> : <>⚡ Process File</>}
+              </button>
+              {(file || result) && <button className="btn btn-outline" onClick={handleReset}>✕ Clear</button>}
+            </div>
+          </div>
+
+          <div className="card">
+            <h2>How it works</h2>
+            <p className="subtitle">What happens to your data on each run</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 16, marginTop: 8 }}>
+              {[
+                { icon: '📅', title: 'Date normalisation', desc: 'Excel serial dates → DD/MM/YYYY' },
+                { icon: '🖱️', title: 'CTR calculation', desc: 'Clicks generated within global CTR range, deduped against yesterday' },
+                { icon: '🎬', title: 'Video metrics', desc: 'VCR kept within campaign or global 75–89% of start views' },
+                { icon: '👁️', title: 'Viewability', desc: 'Viewable impressions within campaign or global 75–89% of measurable' },
+              ].map(({ icon, title, desc }) => (
+                <div key={title} style={{ background: '#f9fafb', borderRadius: 8, padding: '14px 16px' }}>
+                  <div style={{ fontSize: '1.4rem', marginBottom: 6 }}>{icon}</div>
+                  <div style={{ fontWeight: 600, fontSize: '.85rem', marginBottom: 4 }}>{title}</div>
+                  <div style={{ fontSize: '.8rem', color: '#6b7280' }}>{desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Campaign Rules Tab ──────────────────────────────────────────────────────
+
+    // Each "entry" in the multi-entry form represents one campaign name + its VCR/viewability ranges
+    const EMPTY_ENTRY = {
+      id: Date.now(),
+      campaign_name: '',       // Campaign name to match against the "Campaign" column
+      line_item_id: '',        // Line Item ID (optional label/notes)
+      min_vcr: '',
+      max_vcr: '',
+      min_viewability: '',
+      max_viewability: '',
+    };
+
+    function CampaignTab() {
+      const [rules, setRules] = useState([]);
+      // entries: array of entry objects for the multi-entry form
+      const [entries, setEntries] = useState([{ ...EMPTY_ENTRY, id: Date.now() }]);
+      const [editId, setEditId] = useState(null);      // DB rule id being edited
+      const [editCampaignId, setEditCampaignId] = useState(null); // campaign_id of the rule being edited
+      const [status, setStatus] = useState(null);
+      const [loading, setLoading] = useState(false);
+
+      const load = () => apiJson('/api/campaigns').then(setRules).catch(e => setStatus({ type: 'error', msg: e.message }));
+      useEffect(() => { load(); }, []);
+
+      const resetForm = () => {
+        setEntries([{ ...EMPTY_ENTRY, id: Date.now() }]);
+        setEditId(null);
+        setEditCampaignId(null);
+      };
+
+      const parseOpt = v => v === '' ? null : parseFloat(v);
+
+      // Update a specific field in a specific entry
+      const updateEntry = (idx, key, val) => {
+        setEntries(prev => prev.map((e, i) => i === idx ? { ...e, [key]: val } : e));
+      };
+
+      // Add a new blank entry row
+      const addEntry = () => {
+        setEntries(prev => [...prev, { ...EMPTY_ENTRY, id: Date.now() + Math.random() }]);
+      };
+
+      // Remove an entry row (only if more than one)
+      const removeEntry = idx => {
+        setEntries(prev => prev.filter((_, i) => i !== idx));
+      };
+
+      const handleSubmit = async e => {
+        e.preventDefault();
+        setStatus(null);
+
+        // Validate all entries
+        for (let i = 0; i < entries.length; i++) {
+          const entry = entries[i];
+          const label = `Entry ${i + 1}`;
+
+          if (!entry.campaign_name.trim())
+            return setStatus({ type: 'error', msg: `${label}: Campaign Name is required.` });
+
+          const min_vcr = parseOpt(entry.min_vcr);
+          const max_vcr = parseOpt(entry.max_vcr);
+          const min_viewability = parseOpt(entry.min_viewability);
+          const max_viewability = parseOpt(entry.max_viewability);
+
+          if (min_vcr != null && max_vcr != null && min_vcr > max_vcr)
+            return setStatus({ type: 'error', msg: `${label}: VCR Min must be less than or equal to Max.` });
+          if (min_viewability != null && max_viewability != null && min_viewability > max_viewability)
+            return setStatus({ type: 'error', msg: `${label}: Viewability Min must be less than or equal to Max.` });
+        }
+
+        setLoading(true);
+        try {
+          if (editId) {
+            // Edit mode: single entry update
+            const entry = entries[0];
+            const min_vcr = parseOpt(entry.min_vcr);
+            const max_vcr = parseOpt(entry.max_vcr);
+            const min_viewability = parseOpt(entry.min_viewability);
+            const max_viewability = parseOpt(entry.max_viewability);
+
+            await apiJson('/api/campaigns', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                line_item_id: entry.campaign_name,   // campaign_name is the matching key
+                campaign_name: entry.line_item_id,    // line_item_id field is now the "Line Item ID" label
+                min_vcr, max_vcr,
+                min_viewability, max_viewability,
+                enabled: true,
+              }),
+            });
+            setStatus({ type: 'success', msg: 'Rule updated.' });
+          } else {
+            // Add mode: save all entries
+            for (const entry of entries) {
+              const min_vcr = parseOpt(entry.min_vcr);
+              const max_vcr = parseOpt(entry.max_vcr);
+              const min_viewability = parseOpt(entry.min_viewability);
+              const max_viewability = parseOpt(entry.max_viewability);
+
+              await apiJson('/api/campaigns', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  line_item_id: entry.campaign_name,   // campaign_name is the matching key stored as line_item_id
+                  campaign_name: entry.line_item_id,    // line_item_id input goes into campaign_name field (label)
+                  min_vcr, max_vcr,
+                  min_viewability, max_viewability,
+                  enabled: true,
+                }),
+              });
+            }
+            setStatus({ type: 'success', msg: entries.length > 1 ? `${entries.length} rules added.` : 'Rule added.' });
+          }
+
+          resetForm();
+          load();
+        } catch (e) {
+          setStatus({ type: 'error', msg: e.message });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const handleDelete = async (label, id) => {
+        if (!confirm(`Delete rule for "${label}"?`)) return;
+        try { await api(`/api/campaigns/by-id/${id}`, { method: 'DELETE' }); load(); }
+        catch (e) { setStatus({ type: 'error', msg: e.message }); }
+      };
+
+      const handleToggle = async id => {
+        try { await api(`/api/campaigns/by-id/${id}/toggle`, { method: 'PATCH' }); load(); }
+        catch (e) { setStatus({ type: 'error', msg: e.message }); }
+      };
+
+      const handleEdit = r => {
+        // r.campaign_id = the Campaign Name used for matching (stored as line_item_id in DB)
+        // r.campaign_name = the Line Item ID label (stored as campaign_name in DB)
+        setEntries([{
+          id: Date.now(),
+          campaign_name: r.campaign_id,                              // Campaign Name (matching key)
+          line_item_id: r.campaign_name || '',                       // Line Item ID (label)
+          min_vcr: r.min_vcr != null ? String(r.min_vcr) : '',
+          max_vcr: r.max_vcr != null ? String(r.max_vcr) : '',
+          min_viewability: r.min_viewability != null ? String(r.min_viewability) : '',
+          max_viewability: r.max_viewability != null ? String(r.max_viewability) : '',
+        }]);
+        setEditId(r.id);
+        setEditCampaignId(r.campaign_id);
+        setStatus(null);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+
+      const handleCopy = r => {
+        // Copy the VCR and Viewability ranges from the selected rule
+        // Leave Campaign Name and Line Item ID empty for user to fill in
+        setEntries([{
+          id: Date.now(),
+          campaign_name: '',                                         // Empty for user to fill
+          line_item_id: '',                                          // Empty for user to fill
+          min_vcr: r.min_vcr != null ? String(r.min_vcr) : '',
+          max_vcr: r.max_vcr != null ? String(r.max_vcr) : '',
+          min_viewability: r.min_viewability != null ? String(r.min_viewability) : '',
+          max_viewability: r.max_viewability != null ? String(r.max_viewability) : '',
+        }]);
+        setEditId(null);
+        setEditCampaignId(null);
+        setStatus(null);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+
+      return (
+        <div>
+          <div className="card">
+            <h2>{editId ? `Edit Rule: ${editCampaignId}` : 'Add Campaign Rule'}</h2>
+            <p className="subtitle">
+              Set custom VCR and Viewability ranges per campaign.
+              Leave a range empty to fallback to the global default (75–89%).
+              {!editId && ' Click "Add More" to add multiple rules at once.'}
+            </p>
+
+            {status && <div className={`alert alert-${status.type}`}>{status.msg}</div>}
+
+            <form onSubmit={handleSubmit}>
+              {entries.map((entry, idx) => (
+                <div key={entry.id} className="entry-block">
+                  {/* Entry header (only shown when multiple entries) */}
+                  {entries.length > 1 && (
+                    <div className="entry-block-header">
+                      <span className="entry-block-label">Rule #{idx + 1}</span>
+                      <button type="button" className="btn-remove-entry" onClick={() => removeEntry(idx)}>
+                        ✕ Remove
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Campaign identity */}
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Campaign*</label>
+                      <input
+                        type="text"
+                        placeholder="CA01201"
+                        value={entry.campaign_name}
+                        disabled={!!editId}
+                        onChange={e => updateEntry(idx, 'campaign_name', e.target.value)}
+                      />
+                      <span className="hint">Exact name from the "Campaign" column. Multiple: comma-separated. Case-insensitive.</span>
+                    </div>
+                    <div className="form-group">
+                      <label>Line Item ID <span className="opt-tag">(optional)</span></label>
+                      <input
+                        type="text"
+                        placeholder="Line Item ID for notes/label"
+                        value={entry.line_item_id}
+                        onChange={e => updateEntry(idx, 'line_item_id', e.target.value)}
+                      />
+                      <span className="hint">Reference Line Item ID for this campaign rule.</span>
+                    </div>
+                  </div>
+
+                  {/* VCR range */}
+                  <div className="section-label">🎬 Video Completion Rate (VCR) range</div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>VCR Min % <span className="opt-tag">(optional)</span></label>
+                      <input
+                        type="number" step="0.1" min="1" max="99"
+                        placeholder="e.g. 75"
+                        value={entry.min_vcr}
+                        onChange={e => updateEntry(idx, 'min_vcr', e.target.value)}
+                      />
+                      <span className="hint">Leave empty → fallback 75%</span>
+                    </div>
+                    <div className="form-group">
+                      <label>VCR Max % <span className="opt-tag">(optional)</span></label>
+                      <input
+                        type="number" step="0.1" min="1" max="99"
+                        placeholder="e.g. 89"
+                        value={entry.max_vcr}
+                        onChange={e => updateEntry(idx, 'max_vcr', e.target.value)}
+                      />
+                      <span className="hint">Leave empty → fallback 89%</span>
+                    </div>
+                  </div>
+
+                  {/* Viewability range */}
+                  <div className="section-label">👁️ Viewability range</div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Viewability Min % <span className="opt-tag">(optional)</span></label>
+                      <input
+                        type="number" step="0.1" min="1" max="99"
+                        placeholder="e.g. 75"
+                        value={entry.min_viewability}
+                        onChange={e => updateEntry(idx, 'min_viewability', e.target.value)}
+                      />
+                      <span className="hint">Leave empty → fallback 75%</span>
+                    </div>
+                    <div className="form-group">
+                      <label>Viewability Max % <span className="opt-tag">(optional)</span></label>
+                      <input
+                        type="number" step="0.1" min="1" max="99"
+                        placeholder="e.g. 89"
+                        value={entry.max_viewability}
+                        onChange={e => updateEntry(idx, 'max_viewability', e.target.value)}
+                      />
+                      <span className="hint">Leave empty → fallback 89%</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Add More button — only in add mode, not edit mode */}
+              {!editId && (
+                <button type="button" className="btn btn-add-more" onClick={addEntry} style={{ marginBottom: 8 }}>
+                  + Add More
+                </button>
+              )}
+
+              <div className="actions">
+                <button type="submit" className="btn btn-primary" disabled={loading}>
+                  {loading
+                    ? <><span className="spinner" />&nbsp;Saving…</>
+                    : editId
+                      ? '✓ Update Rule'
+                      : entries.length > 1
+                        ? `+ Add ${entries.length} Rules`
+                        : '+ Add Rule'
+                  }
+                </button>
+                {editId && <button type="button" className="btn btn-outline" onClick={resetForm}>Cancel</button>}
+              </div>
+            </form>
+          </div>
+
+          <div className="card">
+            <h2>Campaign Rules</h2>
+            <p className="subtitle">
+              Per-campaign VCR and Viewability overrides. Rows matching the Campaign name use these ranges instead of the global 75–89% default.
+              If a rule has no VCR or Viewability range set, the global fallback (75–89%) is used for that metric.
+            </p>
+            {rules.length === 0 ? (
+              <div className="empty">No campaign rules yet. Add one above.</div>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Campaign Name</th>
+                      <th>Line Item ID</th>
+                      <th>VCR Range</th>
+                      <th>Viewability Range</th>
+                      <th style={{textAlign: 'center'}}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rules.map(r => (
+                      <tr key={r.id}>
+                        <td>
+                          <code style={{ background: '#f3f4f6', padding: '4px 8px', borderRadius: 4, fontSize: '.82rem' }}>
+                            {r.campaign_id}
+                          </code>
+                        </td>
+                        <td>
+                          {r.campaign_name
+                            ? <span style={{ fontSize: '.82rem', color: '#374151' }}>{r.campaign_name}</span>
+                            : <span style={{ color: '#9ca3af' }}>—</span>
+                          }
+                        </td>
+                        <td className="range-pair">
+                          {r.min_vcr != null && r.max_vcr != null
+                            ? <span className="chip chip-violet">{r.min_vcr}% – {r.max_vcr}%</span>
+                            : <span className="chip chip-gray">fallback 75–89%</span>}
+                        </td>
+                        <td className="range-pair">
+                          {r.min_viewability != null && r.max_viewability != null
+                            ? <span className="chip chip-blue">{r.min_viewability}% – {r.max_viewability}%</span>
+                            : <span className="chip chip-gray">fallback 75–89%</span>}
+                        </td>
+                        <td>
+  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+    <label className="toggle">
+      <input type="checkbox" checked={!!r.enabled} onChange={() => handleToggle(r.id)} />
+    </label>
+    <button className="btn btn-outline btn-sm" onClick={() => handleEdit(r)}>Edit</button>
+    <button className="btn btn-outline btn-sm" onClick={() => handleCopy(r)}>Copy</button>
+    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(r.campaign_id, r.id)}>Delete</button>
+  </div>
+</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ── Settings Tab ────────────────────────────────────────────────────────────
+    function SettingsTab({ onUpdate }) {
+      const [form, setForm] = useState({ min_ctr: '', max_ctr: '' });
+      const [status, setStatus] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [memInfo, setMemInfo] = useState(null);
+
+      useEffect(() => {
+        apiJson('/api/settings').then(s => setForm({ min_ctr: String(s.min_ctr), max_ctr: String(s.max_ctr) }));
+        apiJson('/api/memory/summary').then(setMemInfo);
+      }, []);
+
+      const handleSave = async e => {
+        e.preventDefault();
+        const min = parseFloat(form.min_ctr), max = parseFloat(form.max_ctr);
+        if (isNaN(min) || isNaN(max)) return setStatus({ type: 'error', msg: 'Enter valid numbers.' });
+        if (min >= max) return setStatus({ type: 'error', msg: 'Min must be less than Max.' });
+        setLoading(true);
+        try {
+          const res = await apiJson('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ min_ctr: min, max_ctr: max }) });
+          setStatus({ type: 'success', msg: 'Global settings saved.' });
+          if (onUpdate) onUpdate(res);
+        } catch (e) { setStatus({ type: 'error', msg: e.message }); }
+        finally { setLoading(false); }
+      };
+
+      const clearMemory = async () => {
+        if (!confirm('Clear all yesterday memory? Next run will not check for duplicates from previous runs.')) return;
+        try { await api('/api/memory', { method: 'DELETE' }); setStatus({ type: 'success', msg: 'Memory cleared.' }); setMemInfo({ line_items: 0, total_entries: 0, data: {} }); }
+        catch (e) { setStatus({ type: 'error', msg: e.message }); }
+      };
+
+      return (
+        <div>
+          <div className="card">
+            <h2>Global CTR Range</h2>
+            <p className="subtitle">Default CTR range applied to all rows (not overridable per campaign — CTR always uses this global setting).</p>
+            {status && <div className={`alert alert-${status.type}`}>{status.msg}</div>}
+            <form onSubmit={handleSave}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Global Min CTR %</label>
+                  <input type="number" step="0.01" min="0.01" max="99.99" value={form.min_ctr} onChange={e => setForm(f => ({ ...f, min_ctr: e.target.value }))} />
+                  <span className="hint">Default: 0.37%</span>
+                </div>
+                <div className="form-group">
+                  <label>Global Max CTR %</label>
+                  <input type="number" step="0.01" min="0.01" max="99.99" value={form.max_ctr} onChange={e => setForm(f => ({ ...f, max_ctr: e.target.value }))} />
+                  <span className="hint">Default: 0.55%</span>
+                </div>
+              </div>
+              <div className="actions">
+                <button type="submit" className="btn btn-primary" disabled={loading}>
+                  {loading ? <><span className="spinner" />&nbsp;Saving…</> : '✓ Save Settings'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="card">
+            <h2>Global VCR & Viewability Defaults</h2>
+            <p className="subtitle">
+              These are hardcoded at <strong>75–89%</strong> for both VCR and Viewability.
+              Use the Campaign Rules tab to override per campaign.
+              If a campaign rule has no VCR or Viewability range set, these defaults are used.
+            </p>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ background: '#f5f3ff', borderRadius: 8, padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: '.75rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '.5px' }}>🎬 VCR</span>
+                <span style={{ fontSize: '1.3rem', fontWeight: 700, color: '#5b21b6' }}>75% – 89%</span>
+              </div>
+              <div style={{ background: '#eff6ff', borderRadius: 8, padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: '.75rem', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '.5px' }}>👁️ Viewability</span>
+                <span style={{ fontSize: '1.3rem', fontWeight: 700, color: '#1e40af' }}>75% – 89%</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h2>Yesterday Memory</h2>
+            <p className="subtitle">Stored to avoid duplicate CTR values across consecutive runs.</p>
+            {memInfo && (
+              <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#4f46e5' }}>{memInfo.line_items}</div>
+                  <div style={{ fontSize: '.8rem', color: '#6b7280' }}>Line Items tracked</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#4f46e5' }}>{memInfo.total_entries}</div>
+                  <div style={{ fontSize: '.8rem', color: '#6b7280' }}>Total entries</div>
+                </div>
+              </div>
+            )}
+            <button className="btn btn-danger" onClick={clearMemory}>🗑 Clear Memory</button>
+          </div>
+        </div>
+      );
+    }
+
+    // ── App Shell ───────────────────────────────────────────────────────────────
+    function App() {
+      const [tab, setTab] = useState('upload');
+      const [globalCtr, setGlobalCtr] = useState(null);
+
+      useEffect(() => { apiJson('/api/settings').then(setGlobalCtr).catch(() => { }); }, []);
+
+      return (
+        <div>
+          <header className="app-header">
+            <svg width="22" height="22" fill="none" stroke="#a5b4fc" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+            </svg>
+            <h1>CTR Processing Tool</h1>
+            <span className="badge">v1.2</span>
+            {globalCtr && (
+              <span className="ctr-badge" style={{ marginLeft: 'auto' }}>
+                Global CTR: {globalCtr.min_ctr}% – {globalCtr.max_ctr}%
+              </span>
+            )}
+          </header>
+
+          <div className="app-body">
+            <div className="tabs">
+              {[
+                { id: 'upload', label: '📤 Upload & Process' },
+                { id: 'campaigns', label: '🎬 Campaign Rules' },
+                { id: 'settings', label: '⚙️ Settings' },
+              ].map(({ id, label }) => (
+                <button key={id} className={`tab${tab === id ? ' active' : ''}`} onClick={() => setTab(id)}>{label}</button>
+              ))}
+            </div>
+
+            {tab === 'upload' && <UploadTab />}
+            {tab === 'campaigns' && <CampaignTab />}
+            {tab === 'settings' && <SettingsTab onUpdate={setGlobalCtr} />}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+
+</html>
