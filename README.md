@@ -1,81 +1,71 @@
-# CTR Processing Tool
+# CTR Processing Tool — Backend
 
-Python + FastAPI + React port of the n8n workflow.
+## Stack
+Python 3.11+, FastAPI, SQLAlchemy, SQLite (dev) / Postgres (prod), openpyxl, pandas
 
-## Project Structure
-
+## Project structure
 ```
 CRM/
-├── backend/
-│   ├── main.py          ← FastAPI app (API routes)
-│   ├── processor.py     ← Core CTR/VCR/Viewability logic
-│   ├── database.py      ← SQLite via SQLAlchemy
-│   └── requirements.txt
-├── frontend/
-│   └── index.html       ← React UI (no build step needed)
-└── README.md
+├── app/
+│   ├── main.py                  # app factory, startup hooks
+│   ├── config.py                # Settings (reads .env)
+│   ├── api/v1/
+│   │   ├── router.py            # aggregates all endpoint routers
+│   │   └── endpoints/
+│   │       ├── campaigns.py     # GET/POST /api/campaigns, DELETE/PATCH by-id
+│   │       ├── process.py       # POST /api/process  ← main upload/download
+│   │       ├── settings.py      # GET/PUT /api/settings
+│   │       └── memory.py        # GET /api/memory/summary, DELETE /api/memory
+│   ├── db/
+│   │   ├── base.py              # SQLAlchemy engine + Base
+│   │   ├── session.py           # get_db dependency
+│   │   └── init_db.py           # create_all + column migrations
+│   ├── models/campaign.py       # GlobalSettings, CampaignRule, YesterdayMemory
+│   ├── schemas/
+│   │   ├── campaign.py          # CampaignRuleCreate, CampaignRuleResponse
+│   │   └── settings.py          # GlobalSettingsSchema
+│   └── services/
+│       ├── processor.py         # CTR / VCR / Viewability processing logic
+│       ├── excel_writer.py      # openpyxl Excel output builder
+│       └── memory.py            # load/save yesterday snapshot
+├── tests/
+│   └── test_campaigns.py
+├── frontend/index.html          # served at /
+├── data/ctr_app.db              # SQLite DB (auto-created)
+├── .env.example
+├── requirements.txt
+├── Procfile
+└── run.py                       # python run.py → uvicorn with reload
 ```
 
-## Setup & Run
-
-### 1. Install dependencies
-
+## Quick start
 ```bash
-cd backend
+cd CRM
+python -m venv .venv
+.venv\Scripts\activate        # Windows
 pip install -r requirements.txt
+
+cp .env.example .env
+python run.py                 # → http://localhost:8000
 ```
 
-### 2. Start the server
+## API docs
+- Swagger → http://localhost:8000/docs
+- ReDoc   → http://localhost:8000/redoc
 
+## Key endpoints
+| Method | URL | Description |
+|--------|-----|-------------|
+| POST | `/api/process` | Upload xlsx/csv → download processed Excel |
+| GET  | `/api/campaigns` | List all campaign rules |
+| POST | `/api/campaigns` | Add / update a campaign rule |
+| DELETE | `/api/campaigns/by-id/{id}` | Delete a rule |
+| PATCH | `/api/campaigns/by-id/{id}/toggle` | Enable / disable a rule |
+| GET  | `/api/settings` | Read global CTR defaults |
+| PUT  | `/api/settings` | Update global CTR defaults |
+
+## Run tests
 ```bash
-cd backend
-uvicorn main:app --reload
+pip install pytest httpx
+pytest tests/
 ```
-
-The app runs at **http://localhost:8000**
-
-The frontend is served automatically at http://localhost:8000/
-
-### 3. Use it
-
-- Open http://localhost:8000 in your browser
-- **Upload & Process tab** — drag-drop your Excel/CSV, click Process & Download
-- **Campaign CTR Rules tab** — add per-campaign CTR overrides
-- **Settings tab** — change the global CTR range and manage yesterday memory
-
----
-
-## Features
-
-| Feature | Details |
-|---|---|
-| CTR calculation | Random clicks within Min–Max CTR %, deduped against yesterday |
-| Per-campaign CTR override | Set different ranges per Line Item ID |
-| Global CTR range | Default 0.37% – 0.55%, configurable |
-| Video Completion Rate | Kept 75%–89% of Start Views |
-| Viewability | Viewable Impressions 75%–89% of Measurable |
-| Yesterday memory | Stored in SQLite, prevents duplicate CTR across runs |
-| Date normalisation | Excel serial dates and all common formats → DD/MM/YYYY |
-
-## Database
-
-SQLite file `backend/ctr_app.db` is created automatically on first run.
-
-Tables:
-- `global_settings` — one row, min/max CTR
-- `campaign_rules` — per Line Item CTR overrides
-- `yesterday_memory` — last run's click/CTR snapshot
-
-## API Reference
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | /api/process | Upload file → get processed Excel |
-| GET | /api/settings | Get global CTR range |
-| PUT | /api/settings | Update global CTR range |
-| GET | /api/campaigns | List all campaign rules |
-| POST | /api/campaigns | Add or update a campaign rule |
-| DELETE | /api/campaigns/{id} | Delete a campaign rule |
-| PATCH | /api/campaigns/{id}/toggle | Enable/disable a rule |
-| GET | /api/memory/summary | View yesterday memory |
-| DELETE | /api/memory | Clear yesterday memory |
