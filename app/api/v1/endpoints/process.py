@@ -1,5 +1,4 @@
 """File processing endpoint — upload xlsx/csv, download processed CSV."""
-import csv
 import io
 from fastapi import APIRouter, File, HTTPException, UploadFile, Depends
 from fastapi.responses import StreamingResponse
@@ -51,11 +50,13 @@ async def process_file(file: UploadFile = File(...), db: Session = Depends(get_d
 
     contents = await file.read()
     try:
-        df = (
-            pd.read_csv(io.BytesIO(contents), dtype=str, keep_default_na=False)
-            if ext == "csv"
-            else pd.read_excel(io.BytesIO(contents), dtype=str, keep_default_na=False)
-        )
+        if ext in ("xlsx", "xls"):
+            df = pd.read_excel(io.BytesIO(contents), dtype=str, keep_default_na=False)
+        else:
+            # Auto-detect separator (comma or tab)
+            sample = contents[:4096].decode("utf-8-sig", errors="replace")
+            sep = "\t" if sample.count("\t") > sample.count(",") else ","
+            df = pd.read_csv(io.BytesIO(contents), sep=sep, dtype=str, keep_default_na=False, encoding="utf-8-sig")
     except Exception as e:
         raise HTTPException(400, f"Could not parse file: {e}")
 
@@ -81,13 +82,9 @@ async def process_file(file: UploadFile = File(...), db: Session = Depends(get_d
     )
     save_today_snapshot(db, snapshot)
 
-    # Build CSV output
-    buf = io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=OUTPUT_COLUMNS, extrasaction="ignore", lineterminator="\r\n")
-    writer.writeheader()
-    for row in output_rows:
-        writer.writerow({col: (row.get(col) if row.get(col) is not None else "") for col in OUTPUT_COLUMNS})
-    csv_bytes = io.BytesIO(buf.getvalue().encode("utf-8-sig"))  # utf-8-sig adds BOM for Excel compatibility
+    # Build CSV output using pandas (always comma-separated, BOM for Excel compatibility)
+    out_df = pd.DataFrame(output_rows, columns=OUTPUT_COLUMNS)
+    csv_bytes = io.BytesIO(out_df.to_csv(index=False, lineterminator="\r\n").encode("utf-8-sig"))
 
     out_name = f"processed_{filename.rsplit('.', 1)[0]}.csv"
 
