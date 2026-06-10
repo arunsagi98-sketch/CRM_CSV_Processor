@@ -379,6 +379,11 @@
       color: #5b21b6;
     }
 
+    .chip-green {
+      background: #f0fdf4;
+      color: #15803d;
+    }
+
     .alert {
       padding: 12px 16px;
       border-radius: 8px;
@@ -577,7 +582,7 @@
           const blob = await res.blob();
           const cd = res.headers.get('content-disposition') || '';
           const match = cd.match(/filename="([^"]+)"/);
-          const name = match ? match[1] : `processed_${file.name.replace(/\.\w+$/, '')}.xlsx`;
+          const name = match ? match[1] : `processed_${file.name.replace(/\.\w+$/, '')}.csv`;
           const matchedRules = (res.headers.get('x-matched-rules') || '').split(',').filter(Boolean);
           const fileCampaignIds = (res.headers.get('x-file-campaign-ids') || '').split(',').filter(Boolean);
           setResult({ blobUrl: URL.createObjectURL(blob), name, matchedRules, fileCampaignIds });
@@ -668,11 +673,13 @@
 
     // ── Campaign Rules Tab ──────────────────────────────────────────────────────
 
-    // Each "entry" in the multi-entry form represents one campaign name + its VCR/viewability ranges
+    // Each "entry" in the multi-entry form represents one campaign name + its CTR/VCR/viewability ranges
     const EMPTY_ENTRY = {
       id: Date.now(),
       campaign_name: '',       // Campaign name to match against the "Campaign" column
       line_item_id: '',        // Line Item ID (optional label/notes)
+      min_ctr: '',
+      max_ctr: '',
       min_vcr: '',
       max_vcr: '',
       min_viewability: '',
@@ -726,11 +733,17 @@
           if (!entry.campaign_name.trim())
             return setStatus({ type: 'error', msg: `${label}: Campaign Name is required.` });
 
+          const min_ctr = parseOpt(entry.min_ctr);
+          const max_ctr = parseOpt(entry.max_ctr);
           const min_vcr = parseOpt(entry.min_vcr);
           const max_vcr = parseOpt(entry.max_vcr);
           const min_viewability = parseOpt(entry.min_viewability);
           const max_viewability = parseOpt(entry.max_viewability);
 
+          if (min_ctr != null && max_ctr != null && min_ctr >= max_ctr)
+            return setStatus({ type: 'error', msg: `${label}: CTR Min must be less than Max.` });
+          if ((min_ctr != null) !== (max_ctr != null))
+            return setStatus({ type: 'error', msg: `${label}: Set both CTR Min and Max, or leave both empty.` });
           if (min_vcr != null && max_vcr != null && min_vcr > max_vcr)
             return setStatus({ type: 'error', msg: `${label}: VCR Min must be less than or equal to Max.` });
           if (min_viewability != null && max_viewability != null && min_viewability > max_viewability)
@@ -742,6 +755,8 @@
           if (editId) {
             // Edit mode: single entry update
             const entry = entries[0];
+            const min_ctr = parseOpt(entry.min_ctr);
+            const max_ctr = parseOpt(entry.max_ctr);
             const min_vcr = parseOpt(entry.min_vcr);
             const max_vcr = parseOpt(entry.max_vcr);
             const min_viewability = parseOpt(entry.min_viewability);
@@ -753,6 +768,7 @@
               body: JSON.stringify({
                 line_item_id: entry.campaign_name,   // campaign_name is the matching key
                 campaign_name: entry.line_item_id,    // line_item_id field is now the "Line Item ID" label
+                min_ctr, max_ctr,
                 min_vcr, max_vcr,
                 min_viewability, max_viewability,
                 enabled: true,
@@ -762,6 +778,8 @@
           } else {
             // Add mode: save all entries
             for (const entry of entries) {
+              const min_ctr = parseOpt(entry.min_ctr);
+              const max_ctr = parseOpt(entry.max_ctr);
               const min_vcr = parseOpt(entry.min_vcr);
               const max_vcr = parseOpt(entry.max_vcr);
               const min_viewability = parseOpt(entry.min_viewability);
@@ -773,6 +791,7 @@
                 body: JSON.stringify({
                   line_item_id: entry.campaign_name,   // campaign_name is the matching key stored as line_item_id
                   campaign_name: entry.line_item_id,    // line_item_id input goes into campaign_name field (label)
+                  min_ctr, max_ctr,
                   min_vcr, max_vcr,
                   min_viewability, max_viewability,
                   enabled: true,
@@ -809,6 +828,8 @@
           id: Date.now(),
           campaign_name: r.campaign_id,                              // Campaign Name (matching key)
           line_item_id: r.campaign_name || '',                       // Line Item ID (label)
+          min_ctr: r.min_ctr != null ? String(r.min_ctr) : '',
+          max_ctr: r.max_ctr != null ? String(r.max_ctr) : '',
           min_vcr: r.min_vcr != null ? String(r.min_vcr) : '',
           max_vcr: r.max_vcr != null ? String(r.max_vcr) : '',
           min_viewability: r.min_viewability != null ? String(r.min_viewability) : '',
@@ -821,12 +842,14 @@
       };
 
       const handleCopy = r => {
-        // Copy the VCR and Viewability ranges from the selected rule
+        // Copy the CTR, VCR and Viewability ranges from the selected rule
         // Leave Campaign Name and Line Item ID empty for user to fill in
         setEntries([{
           id: Date.now(),
           campaign_name: '',                                         // Empty for user to fill
           line_item_id: '',                                          // Empty for user to fill
+          min_ctr: r.min_ctr != null ? String(r.min_ctr) : '',
+          max_ctr: r.max_ctr != null ? String(r.max_ctr) : '',
           min_vcr: r.min_vcr != null ? String(r.min_vcr) : '',
           max_vcr: r.max_vcr != null ? String(r.max_vcr) : '',
           min_viewability: r.min_viewability != null ? String(r.min_viewability) : '',
@@ -843,8 +866,8 @@
           <div className="card">
             <h2>{editId ? `Edit Rule: ${editCampaignId}` : 'Add Campaign Rule'}</h2>
             <p className="subtitle">
-              Set custom VCR and Viewability ranges per campaign.
-              Leave a range empty to fallback to the global default (75–89%).
+              Set custom CTR, VCR and Viewability ranges per campaign.
+              Leave a range empty to fallback to the global default.
               {!editId && ' Click "Add More" to add multiple rules at once.'}
             </p>
 
@@ -885,6 +908,31 @@
                         onChange={e => updateEntry(idx, 'line_item_id', e.target.value)}
                       />
                       <span className="hint">Reference Line Item ID for this campaign rule.</span>
+                    </div>
+                  </div>
+
+                  {/* CTR range */}
+                  <div className="section-label">🖱️ Click-Through Rate (CTR) range</div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>CTR Min % <span className="opt-tag">(optional)</span></label>
+                      <input
+                        type="number" step="0.01" min="0.01" max="99.99"
+                        placeholder="e.g. 0.37"
+                        value={entry.min_ctr}
+                        onChange={e => updateEntry(idx, 'min_ctr', e.target.value)}
+                      />
+                      <span className="hint">Leave empty → uses global CTR min</span>
+                    </div>
+                    <div className="form-group">
+                      <label>CTR Max % <span className="opt-tag">(optional)</span></label>
+                      <input
+                        type="number" step="0.01" min="0.01" max="99.99"
+                        placeholder="e.g. 0.55"
+                        value={entry.max_ctr}
+                        onChange={e => updateEntry(idx, 'max_ctr', e.target.value)}
+                      />
+                      <span className="hint">Leave empty → uses global CTR max</span>
                     </div>
                   </div>
 
@@ -978,6 +1026,7 @@
                     <tr>
                       <th>Campaign Name</th>
                       <th>Line Item ID</th>
+                      <th>CTR Range</th>
                       <th>VCR Range</th>
                       <th>Viewability Range</th>
                       <th style={{textAlign: 'center'}}>Actions</th>
@@ -996,6 +1045,11 @@
                             ? <span style={{ fontSize: '.82rem', color: '#374151' }}>{r.campaign_name}</span>
                             : <span style={{ color: '#9ca3af' }}>—</span>
                           }
+                        </td>
+                        <td className="range-pair">
+                          {r.min_ctr != null && r.max_ctr != null
+                            ? <span className="chip chip-green">{r.min_ctr}% – {r.max_ctr}%</span>
+                            : <span className="chip chip-gray">global fallback</span>}
                         </td>
                         <td className="range-pair">
                           {r.min_vcr != null && r.max_vcr != null
@@ -1064,7 +1118,7 @@
         <div>
           <div className="card">
             <h2>Global CTR Range</h2>
-            <p className="subtitle">Default CTR range applied to all rows (not overridable per campaign — CTR always uses this global setting).</p>
+            <p className="subtitle">Default CTR range applied to all rows. Can be overridden per campaign in the Campaign Rules tab.</p>
             {status && <div className={`alert alert-${status.type}`}>{status.msg}</div>}
             <form onSubmit={handleSave}>
               <div className="form-row">
