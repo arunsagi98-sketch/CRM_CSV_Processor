@@ -82,9 +82,9 @@ async def process_file(file: UploadFile = File(...), db: Session = Depends(get_d
     )
     save_today_snapshot(db, snapshot)
 
-    # Build CSV output using pandas (always comma-separated, BOM for Excel compatibility)
+    # Build CSV output — same as pd.to_csv(index=False), plain UTF-8
     out_df = pd.DataFrame(output_rows, columns=OUTPUT_COLUMNS)
-    csv_bytes = io.BytesIO(out_df.to_csv(index=False, lineterminator="\r\n").encode("utf-8-sig"))
+    csv_bytes = io.BytesIO(out_df.to_csv(index=False).encode("utf-8"))
 
     out_name = f"processed_{filename.rsplit('.', 1)[0]}.csv"
 
